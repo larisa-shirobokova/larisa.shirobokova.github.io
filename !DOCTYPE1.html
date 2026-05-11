@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Игра: Чего не хватает?</title>
+    <!-- Подключаем дружелюбный шрифт -->
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #FFF9F0;
+            --card-bg: #FFFFFF;
+            --primary: #FF6B6B;
+            --secondary: #4ECDC4;
+            --accent: #FFD93D;
+            --text-main: #2D3436;
+            --border-color: #FFE66D;
+        }
+
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+            color: var(--text-main);
+        }
+
+        /* Контейнер игры */
+        .game-wrapper {
+            background: var(--card-bg);
+            width: 90%;
+            max-width: 500px;
+            border-radius: 40px;
+            padding: 30px;
+            box-shadow: 0 15px 0 #E0D5C1;
+            border: 8px solid var(--border-color);
+            text-align: center;
+            position: relative;
+        }
+
+        /* Полоса прогресса */
+        .progress-container {
+            width: 100%;
+            height: 14px;
+            background: #F0F0F0;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            width: 0%;
+            height: 100%;
+            background: var(--secondary);
+            transition: width 0.4s ease;
+        }
+
+        /* Область с картинкой/эмодзи */
+        .visual-box {
+            font-size: 80px;
+            background: #F8F9FA;
+            border-radius: 30px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 4px dashed #D1D8E0;
+        }
+
+        /* Текст вопроса */
+        .question-text {
+            font-size: 26px;
+            font-weight: 900;
+            margin-bottom: 30px;
+            min-height: 70px;
+        }
+
+        .question-text span {
+            color: var(--primary);
+            text-decoration: underline;
+            text-decoration-style: dashed;
+        }
+
+        /* Кнопки вариантов */
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .option-btn {
+            background: #FFFFFF;
+            border: 3px solid #E2E8F0;
+            border-radius: 20px;
+            padding: 18px;
+            font-size: 20px;
+            font-weight: 700;
+            font-family: 'Nunito', sans-serif;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 6px 0 #E2E8F0;
+            color: var(--text-main);
+        }
+
+        .option-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .option-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 2px 0 #E2E8F0;
+        }
+
+        /* Состояния кнопок */
+        .option-btn.correct {
+            background: #C3FAE8;
+            border-color: #2ECC71;
+            box-shadow: 0 6px 0 #27AE60;
+            color: #1E5631;
+        }
+
+        .option-btn.wrong {
+            background: #FFE3E3;
+            border-color: #FF6B6B;
+            box-shadow: 0 6px 0 #EE5253;
+            animation: shake 0.4s;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-6px); }
+            75% { transform: translateX(6px); }
+        }
+
+        /* Экран финала */
+        #victory-screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .victory-title {
+            font-size: 42px;
+            color: var(--primary);
+            margin: 15px 0;
+        }
+
+        /* Эффект звездочек */
+        .star-particle {
+            position: fixed;
+            pointer-events: none;
+            z-index: 999;
+            animation: fall 1.5s ease-out forwards;
+        }
+
+        @keyframes fall {
+            0% { transform: translateY(0) rotate(0); opacity: 1; }
+            100% { transform: translateY(100vh) rotate(360deg); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="game-wrapper" id="main-container">
+    <div id="quiz-content">
+        <div class="progress-container">
+            <div class="progress-bar" id="progress"></div>
+        </div>
+        
+        <div class="visual-box" id="image-box">🐱❓</div>
+        
+        <div class="question-text" id="question">
+            У девочки нет <span>...</span> (кошка)
+        </div>
+        
+        <div class="options-grid" id="options">
+            <!-- Кнопки создаются в JS -->
+        </div>
+    </div>
+
+    <!-- Финальный экран -->
+    <div id="victory-screen">
+        <div style="font-size: 100px;">⭐</div>
+        <h2 class="victory-title">МОЛОДЕЦ!</h2>
+        <p style="font-size: 22px; margin-bottom: 20px;">Ты отлично справился!</p>
+        <button class="option-btn" style="width: 100%; background: var(--accent); border-color: #F1C40F; box-shadow: 0 6px 0 #D4AC0D;" onclick="location.reload()">Начать сначала</button>
+    </div>
+</div>
+
+<script>
+    // Данные для заданий
+    const questions = [
+        {
+            word: "кошка",
+            text: "У девочки нет <span>...</span>",
+            options: ["кошка", "кошку", "кошки", "кошкой"],
+            correct: 2,
+            icon: "👧🐱🚫"
+        },
+        {
+            word: "телефон",
+            text: "В сумке нет <span>...</span>",
+            options: ["телефон", "телефону", "телефона", "телефоном"],
+            correct: 2,
+            icon: "👜📱🚫"
+        },
+        {
+            word: "ручка",
+            text: "В пенале нет <span>...</span>",
+            options: ["ручка", "ручку", "ручки", "ручке"],
+            correct: 2,
+            icon: "✏️🖊️🚫"
+        },
+        {
+            word: "окно",
+            text: "В доме нет <span>...</span>",
+            options: ["окно", "окна", "окну", "окном"],
+            correct: 1,
+            icon: "🏠🪟🚫"
+        },
+        {
+            word: "стол",
+            text: "В комнате нет <span>...</span>",
+            options: ["стол", "стола", "столу", "столом"],
+            correct: 1,
+            icon: "🛋️🪑🚫"
+        }
+    ];
+
+    let currentIdx = 0;
+    let canClick = true;
+
+    function render() {
+        const data = questions[currentIdx];
+        document.getElementById('image-box').innerText = data.icon;
+        document.getElementById('question').innerHTML = data.text;
+        
+        const optionsContainer = document.getElementById('options');
+        optionsContainer.innerHTML = '';
+        
+        data.options.forEach((opt, index) => {
+            const btn = document.createElement('button');
+            btn.className = 'option-btn';
+            btn.innerText = opt;
+            btn.onclick = () => checkAnswer(index, btn);
+            optionsContainer.appendChild(btn);
+        });
+
+        // Обновление прогресса
+        const progressPercent = (currentIdx / questions.length) * 100;
+        document.getElementById('progress').style.width = progressPercent + '%';
+    }
+
+    function checkAnswer(chosenIdx, btn) {
+        if (!canClick) return;
+
+        if (chosenIdx === questions[currentIdx].correct) {
+            canClick = false;
+            btn.classList.add('correct');
+            launchStars();
+            
+            setTimeout(() => {
+                currentIdx++;
+                if (currentIdx < questions.length) {
+                    render();
+                    canClick = true;
+                } else {
+                    showFinal();
+                }
+            }, 1000);
+        } else {
+            btn.classList.add('wrong');
+            setTimeout(() => btn.classList.remove('wrong'), 500);
+        }
+    }
+
+    // Эффект летящих звездочек
+    function launchStars() {
+        const starsCount = 15;
+        for (let i = 0; i < starsCount; i++) {
+            const star = document.createElement('div');
+            star.className = 'star-particle';
+            star.innerText = ['⭐', '🌟', '✨'][Math.floor(Math.random() * 3)];
+            star.style.left = Math.random() * 100 + 'vw';
+            star.style.top = '-50px';
+            star.style.fontSize = (Math.random() * 20 + 20) + 'px';
+            star.style.animationDuration = (Math.random() * 1 + 1) + 's';
+            document.body.appendChild(star);
+            
+            setTimeout(() => star.remove(), 2000);
+        }
+    }
+
+    function showFinal() {
+        document.getElementById('quiz-content').style.display = 'none';
+        document.getElementById('victory-screen').style.display = 'flex';
+        document.getElementById('progress').style.width = '100%';
+        
+        // Бесконечный салют
+        setInterval(launchStars, 800);
+    }
+
+    // Запуск игры
+    window.onload = render;
+</script>
+
+</body>
+</html>
